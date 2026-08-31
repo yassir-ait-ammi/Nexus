@@ -1,0 +1,46 @@
+.DEFAULT_GOAL := help
+
+API_DIR := apps/api
+WEB_DIR := apps/web
+
+.PHONY: help install up down ps logs migrate generate api web dev stop
+
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+
+install: ## Install dependencies for the api and web apps
+	cd $(API_DIR) && npm install
+	cd $(WEB_DIR) && npm install
+
+up: ## Start Postgres (waits until healthy)
+	docker compose up -d --wait postgres
+
+down: ## Stop and remove the docker compose services
+	docker compose down
+
+ps: ## Show status of docker compose services
+	docker compose ps
+
+logs: ## Tail Postgres logs
+	docker compose logs -f postgres
+
+migrate: up ## Apply the better-auth database schema
+	cd $(API_DIR) && npx auth@latest migrate --config src/auth/auth.ts -y
+
+generate: ## Regenerate the better-auth migration SQL (does not apply it)
+	cd $(API_DIR) && npx auth@latest generate --config src/auth/auth.ts -y
+
+api: up ## Run the API dev server (NestJS, port 3000)
+	cd $(API_DIR) && npm run start:dev
+
+web: ## Run the web dev server (Vite, port 5173)
+	cd $(WEB_DIR) && npm run dev -- --port 5173
+
+dev: up ## Run Postgres, the API, and the web app together
+	@trap 'kill 0' EXIT INT TERM; \
+	(cd $(API_DIR) && npm run start:dev) & \
+	(cd $(WEB_DIR) && npm run dev -- --port 5173) & \
+	wait
+
+stop: ## Kill anything left running on the dev ports (3000, 5173)
+	-fuser -k 3000/tcp 5173/tcp
