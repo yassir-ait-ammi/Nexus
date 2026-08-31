@@ -12,8 +12,8 @@ install: ## Install dependencies for the api and web apps
 	cd $(API_DIR) && npm install
 	cd $(WEB_DIR) && npm install
 
-up: ## Start Postgres and Redis (waits until healthy)
-	docker compose up -d --wait postgres redis
+up: ## Start Postgres, Redis, and RabbitMQ (waits until healthy)
+	docker compose up -d --wait postgres redis rabbitmq
 
 down: ## Stop and remove the docker compose services
 	docker compose down
@@ -21,8 +21,8 @@ down: ## Stop and remove the docker compose services
 ps: ## Show status of docker compose services
 	docker compose ps
 
-logs: ## Tail Postgres and Redis logs
-	docker compose logs -f postgres redis
+logs: ## Tail Postgres, Redis, and RabbitMQ logs
+	docker compose logs -f postgres redis rabbitmq
 
 migrate: up ## Apply the better-auth database schema
 	cd $(API_DIR) && npx auth@latest migrate --config src/auth/auth.ts -y

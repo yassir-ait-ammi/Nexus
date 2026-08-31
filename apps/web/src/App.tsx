@@ -14,8 +14,10 @@ import {
   messageApi,
   membershipApi,
   mapMemberToUser,
+  notificationApi,
+  mapNotificationDto,
 } from './lib/api';
-import type { MemberDto } from './lib/api';
+import type { MemberDto, NotificationDto } from './lib/api';
 import { connectSocket, disconnectSocket, getSocket } from './lib/socket';
 
 import { WorkspaceRail } from './components/layout/WorkspaceRail';
@@ -31,6 +33,7 @@ import { CreateChannelModal } from './components/modals/CreateChannelModal';
 import { WorkspaceSettingsModal } from './components/modals/WorkspaceSettingsModal';
 import { UserProfileModal } from './components/modals/UserProfileModal';
 import { AttachmentPreviewModal } from './components/modals/AttachmentPreviewModal';
+import { NotificationToast } from './components/notifications/NotificationToast';
 
 export default function App() {
   const { currentUser, isPending: isSessionPending } = useCurrentUser();
@@ -66,6 +69,7 @@ export default function App() {
   const [previewingAttachment, setPreviewingAttachment] = useState<null>(null);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [isSocketReady, setIsSocketReady] = useState(false);
+  const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
 
   // Connect the realtime socket once authenticated, disconnect on sign-out.
   // Every other socket-dependent effect below depends on `isSocketReady`
@@ -244,6 +248,41 @@ export default function App() {
     };
   }, [currentUser?.id, activeWorkspaceId, isSocketReady]);
 
+  // Load existing notifications once authenticated, then keep them live via
+  // the socket (a personal `user:<id>` room the gateway joins every socket
+  // to — notifications aren't scoped to whichever workspace/channel is
+  // currently open).
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+    notificationApi.list().then((list) => {
+      if (!cancelled) setNotifications(list.map(mapNotificationDto));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onNotificationCreated = (dto: NotificationDto) => {
+      const notification = mapNotificationDto(dto);
+      setNotifications((prev) => [notification, ...prev]);
+      setActiveToast(notification);
+      if (soundEnabled) {
+        playNotificationSound('message');
+      }
+    };
+
+    socket.on('notification:created', onNotificationCreated);
+    return () => socket.off('notification:created', onNotificationCreated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, isSocketReady]);
+
   // Live typing indicator for the currently active channel
   useEffect(() => {
     setTypingUserId(null);
@@ -411,6 +450,16 @@ export default function App() {
     setActiveChannelId(dmChannel.id);
   };
 
+  const handleMarkNotificationAsRead = async (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    await notificationApi.markRead(id);
+  };
+
+  const handleMarkAllNotificationsAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    await notificationApi.markAllRead();
+  };
+
   const channelMessages = messages;
   const pinnedMessages = channelMessages.filter((m) => m.pinned);
   const typingUser = members.find((m) => m.id === typingUserId) ?? null;
@@ -450,14 +499,8 @@ export default function App() {
               channel={activeChannel}
               pinnedMessages={pinnedMessages}
               notifications={notifications}
-              onMarkNotificationAsRead={(id) =>
-                setNotifications((prev) =>
-                  prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-                )
-              }
-              onMarkAllNotificationsAsRead={() =>
-                setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-              }
+              onMarkNotificationAsRead={handleMarkNotificationAsRead}
+              onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead}
               onClearAllNotifications={() => setNotifications([])}
               onSelectChannel={handleSelectChannel}
               showMembersSidebar={showMembersSidebar}
@@ -507,6 +550,20 @@ export default function App() {
           currentUser={currentUser}
         />
       )}
+
+      <NotificationToast
+        notification={activeToast}
+        onClose={() => setActiveToast(null)}
+        onClick={() => {
+          if (activeToast?.workspaceId && activeToast.workspaceId !== activeWorkspaceId) {
+            setActiveWorkspaceId(activeToast.workspaceId);
+          }
+          if (activeToast?.channelId) {
+            setActiveChannelId(activeToast.channelId);
+          }
+          setActiveToast(null);
+        }}
+      />
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
 

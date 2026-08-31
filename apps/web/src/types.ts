@@ -86,5 +86,5 @@ export interface AppNotification {
   read: boolean;
   workspaceId: string;
   channelId?: string;
-  sender?: User;
+  sender?: { id: string; name: string; username: string; avatar: string } | null;
 }

@@ -2,6 +2,17 @@ import React from 'react';
 import { AppNotification } from '../../types';
 import { Bell, Check, Trash2, MessageSquare, Megaphone, UserPlus, Info } from 'lucide-react';
 
+function formatRelativeTime(isoString: string): string {
+  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 interface NotificationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
@@ -106,7 +117,9 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
                       <h4 className="text-xs font-bold text-[#F8FAFC] truncate">{notif.title}</h4>
-                      <span className="text-[10px] text-[#94A3B8] shrink-0">{notif.createdAt}</span>
+                      <span className="text-[10px] text-[#94A3B8] shrink-0">
+                        {formatRelativeTime(notif.createdAt)}
+                      </span>
                     </div>
                     <p className="text-[11px] text-[#94A3B8] line-clamp-2 mt-0.5 leading-relaxed">
                       {notif.body}

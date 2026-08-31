@@ -1,5 +1,5 @@
 import { apiFetch, apiUpload } from './api-client';
-import { Channel, ChannelSection, ChannelType, Message, User, Workspace } from '../types';
+import { AppNotification, Channel, ChannelSection, ChannelType, Message, User, Workspace } from '../types';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
@@ -78,4 +78,38 @@ export const profileApi = {
     formData.append('file', file);
     return apiUpload<{ avatar: string }>('/profile/avatar', formData);
   },
+};
+
+export interface NotificationDto {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+  workspaceId: string;
+  channelId: string;
+  sender: { id: string; name: string; username: string; avatar: string | null } | null;
+}
+
+export function mapNotificationDto(dto: NotificationDto): AppNotification {
+  return {
+    id: dto.id,
+    type: dto.type as AppNotification['type'],
+    title: dto.title,
+    body: dto.body,
+    createdAt: dto.createdAt,
+    read: dto.read,
+    workspaceId: dto.workspaceId,
+    channelId: dto.channelId,
+    sender: dto.sender
+      ? { ...dto.sender, avatar: dto.sender.avatar || DEFAULT_AVATAR }
+      : null,
+  };
+}
+
+export const notificationApi = {
+  list: () => apiFetch<NotificationDto[]>('/notification'),
+  markRead: (id: string) => apiFetch<void>(`/notification/${id}/read`, { method: 'PATCH' }),
+  markAllRead: () => apiFetch<void>('/notification/read-all', { method: 'PATCH' }),
 };
