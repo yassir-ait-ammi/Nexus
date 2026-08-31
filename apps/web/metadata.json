@@ -1,0 +1,6 @@
+{
+  "name": "Pulse Realtime Workspace",
+  "description": "A high-performance dark-themed team messaging and workspace platform with real-time channels, rich messaging, file attachments, online presence, and distributed message flow architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
