@@ -284,7 +284,11 @@ export default function App() {
     }
   }, [activeChannelId]);
 
-  // Load messages whenever the active channel changes
+  // Load messages whenever the active channel changes. Also keyed on the
+  // user's id: activeChannelId is restored from localStorage, so on a
+  // logout -> login cycle it's often unchanged, and without this dependency
+  // this effect would never refetch — leaving whatever was in memory before
+  // logout on screen, missing anything sent while signed out.
   useEffect(() => {
     if (!activeChannelId) {
       setMessages([]);
@@ -297,7 +301,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [activeChannelId]);
+  }, [activeChannelId, currentUser?.id]);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null;
   const activeChannel = channels.find((c) => c.id === activeChannelId) ?? null;
