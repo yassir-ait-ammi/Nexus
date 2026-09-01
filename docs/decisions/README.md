@@ -10,6 +10,7 @@ Short records of decisions that weren't obvious enough to skip explaining — ea
 | [0004](0004-manual-foreign-keys-over-orm-relations.md) | Manual foreign keys instead of TypeORM relations |
 | [0005](0005-cloudinary-for-avatar-storage.md) | Cloudinary for avatar storage |
 | [0006](0006-nginx-sticky-sessions.md) | nginx sticky sessions (`ip_hash`) in front of the API cluster |
+| [0007](0007-channel-created-broadcast.md) | `channel:created` broadcast for DM creation (and the `forwardRef` it required) |
 
 ## Format
 

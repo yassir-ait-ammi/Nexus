@@ -22,26 +22,29 @@ Nothing about the module boundaries assumes these three run in the same process.
 |---|---|---|
 | `auth/` | better-auth instance (email/password + Google OAuth), session validation used by both REST guards and the WS gateway | Postgres (via its own raw SQL migrations, not TypeORM) |
 | `workspace/` | Workspace CRUD, invite-code join flow | `membership/`, `chat/` (to broadcast `member:joined`) |
-| `channel/` | Channel CRUD, access control (including DM channels — see [database-design.md](database-design.md)) | `membership/` |
+| `channel/` | Channel CRUD, access control (including DM channels — see [database-design.md](database-design.md)) | `membership/`, `chat/` (controller broadcasts `channel:created` on DM creation — see below) |
 | `membership/` | Workspace↔user roles; pure data access, no gateway dependency | — |
 | `message/` | Messages + reactions | `chat/` (broadcasts on every write), `common/rabbitmq/` (publishes `message.created`) |
 | `notification/` | Mention notifications + the RabbitMQ consumer that creates them | `common/rabbitmq/`, `common/auth-users/`, `chat/` (broadcasts `notification:created`) |
-| `chat/` | The WebSocket gateway — rooms, presence, the six `broadcast*` methods other modules call | `membership/`, `channel/`, `common/redis/` |
+| `chat/` | The WebSocket gateway — rooms, presence, the `broadcast*` methods other modules call | `membership/`, `channel/`, `common/redis/` |
 | `profile/` | Avatar upload | `common/cloudinary/`, `common/auth-users/` |
 | `common/redis/` | Redis client pair (pub/sub) + presence tracking (`SADD`/`SREM`/`SCARD`) | — |
 | `common/rabbitmq/` | Topic exchange `nexus.events`; generic `publish`/`consume` helpers | — |
 | `common/cloudinary/` | Cloudinary client | — |
 | `common/auth-users/` | Reads/writes better-auth's own `user` table via raw SQL (TypeORM doesn't own that table) | Postgres |
 
+`channel/` and `chat/` depend on each other — a genuine circular module dependency, resolved with `forwardRef()` on both sides rather than hidden. `chat/` needs `channel/` for access checks on `channel:join`; `channel/` needs `chat/` to announce a new DM to its recipient. See [decisions/0007](decisions/0007-channel-created-broadcast.md).
+
 Two directories exist but aren't real: `user/` and `attachment/` are unmodified Nest CLI scaffolding — entities that are never registered with TypeORM (`export class User {}`), services that return placeholder strings. They're dead code, not a hidden feature. Identity lives in better-auth's `user` table via `auth-users/`; there is no file-attachment feature beyond avatar upload.
 
 ## The REST → WebSocket bridge
 
-The single most important cross-cutting pattern: **REST controllers don't emit WebSocket events directly.** A write goes REST → service → Postgres, and only after that succeeds does the *same service* call a `broadcast*` method on the injected `ChatGateway`. Three services do this:
+The single most important cross-cutting pattern: **REST controllers don't emit WebSocket events directly** — with one deliberate exception. A write goes REST → service → Postgres, and only after that succeeds does the *same service* (or, for DM creation specifically, the controller — see below) call a `broadcast*` method on the injected `ChatGateway`. Three services do this, plus one controller:
 
 - `MessageService` — every create/update/delete/reaction-toggle broadcasts to the message's channel room.
 - `WorkspaceService` — a successful invite-code join broadcasts `member:joined` to the workspace room.
 - `MentionNotifierService` (itself a RabbitMQ consumer, not a controller) — broadcasts `notification:created` to the mentioned user's personal room.
+- `ChannelController` — the exception: broadcasts `channel:created` to both DM participants' personal rooms after `findOrCreateDirectMessage`. It's on the controller, not `ChannelService`, specifically to avoid `ChannelService` itself needing a `forwardRef` back to `chat/` (see the circular-dependency note above).
 
 Full event-by-event detail is in [websocket-flow.md](websocket-flow.md).
 

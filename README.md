@@ -189,8 +189,10 @@ Without the adapter, step 3 doesn't happen — Bob's socket on instance 2 never 
 | Auth | better-auth (email/password + Google OAuth) | Session-cookie based, works uniformly for REST and WebSocket auth |
 | Real-time | Socket.IO | Rooms map cleanly onto "workspace," "channel," and "this one user" broadcast scopes |
 | Horizontal scaling | Redis + `@socket.io/redis-adapter` | Turns multi-instance WebSocket broadcast from a hard problem into a config line |
+| Load balancing | nginx (`ip_hash`) | Fronts the 3-instance API cluster (`make cluster`) — sticky sessions because Socket.IO's handshake needs request affinity, not just throughput balancing |
 | Async processing | RabbitMQ (topic exchange) | Decouples notification fan-out from the message-send request path |
 | File storage | Cloudinary | Avatars need to live outside any single instance's disk |
+| Containerization | Docker + docker-compose | `apps/api/Dockerfile` + a `cluster` compose profile — the multi-instance topology actually runs, not just diagrams |
 
 ---
 
@@ -230,7 +232,7 @@ apps/
     src/
       auth/              better-auth instance + config
       workspace/         workspace CRUD + invite links
-      channel/           channel CRUD + access control
+      channel/           channel CRUD + access control (DM creation broadcasts channel:created)
       membership/        who belongs to what, with what role
       message/           messages + reactions
       notification/      mention notifications + RabbitMQ consumer
@@ -241,14 +243,17 @@ apps/
         rabbitmq/         RabbitMQ client + publish/consume helpers
         cloudinary/       Cloudinary client
         auth-users/       reads/writes better-auth's own user table
+    Dockerfile           multi-stage build for the `cluster` compose profile
   web/                  React + Vite frontend
     src/
       components/        UI, organized by feature area
       lib/               API client, socket client, auth client
       pages/             the one routed page (/join/:inviteCode)
 
-docker-compose.yml       Postgres, Redis, RabbitMQ
-Makefile                 make dev / make up / make migrate / ...
+docs/                    architecture.md, database-design.md, websocket-flow.md, scaling-plan.md, decisions/
+nginx/nginx.conf         reverse proxy in front of the api1-3 cluster (ip_hash — see decisions/0006)
+docker-compose.yml       Postgres, Redis, RabbitMQ, + api1-3/nginx behind the `cluster` profile
+Makefile                 make dev / make cluster / make migrate / ...
 ```
 
 ---
