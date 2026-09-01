@@ -18,6 +18,7 @@ import { ChannelService } from '../channel/channel.service';
 import { RedisService } from '../common/redis/redis.service';
 import type { HydratedMessage } from '../message/message.service';
 import type { NotificationDto } from '../notification/notification.service';
+import type { Channel } from '../channel/entities/channel.entity';
 
 interface AuthedSocketData {
   userId: string;
@@ -44,9 +45,6 @@ export class ChatGateway
     private readonly redisService: RedisService,
   ) {}
 
-  // Without this, broadcasts (this.server.to(room).emit(...)) only reach
-  // sockets connected to this same process. The Redis adapter relays them
-  // through pub/sub so multiple API instances stay in sync.
   async afterInit(server: Server) {
     await this.redisService.ready;
     server.adapter(
@@ -73,8 +71,6 @@ export class ChatGateway
     for (const membership of memberships) {
       client.join(`workspace:${membership.workspaceId}`);
     }
-    // Personal room — lets us target this specific user (e.g. a mention
-    // notification) regardless of which workspace/channel they're viewing.
     client.join(`user:${userId}`);
 
     const { wasOffline } = await this.redisService.markSocketOnline(
@@ -243,5 +239,17 @@ export class ChatGateway
 
   broadcastNotification(userId: string, notification: NotificationDto) {
     this.server.to(`user:${userId}`).emit('notification:created', notification);
+  }
+
+  // Fired when a DM channel is created (or re-found) so the *other*
+  // participant's client learns it exists without waiting for a message —
+  // channel creation otherwise has no realtime signal at all, unlike every
+  // other write in this app. Targets each member's personal room, so the
+  // initiator (already holding the channel locally) just gets a harmless
+  // no-op merge.
+  broadcastChannelCreated(channel: Channel) {
+    for (const memberId of channel.memberIds ?? []) {
+      this.server.to(`user:${memberId}`).emit('channel:created', channel);
+    }
   }
 }

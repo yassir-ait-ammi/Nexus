@@ -76,9 +76,6 @@ export class ChannelService {
     return channel;
   }
 
-  // For internal/system use (e.g. the notification consumer, which checks
-  // access on behalf of a *different* user than the one making the request)
-  // — no auth check, just the raw row.
   findByIdUnchecked(id: string) {
     return this.channelRepository.findOneBy({ id });
   }

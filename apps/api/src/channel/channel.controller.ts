@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Delete,
+  forwardRef,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -13,10 +15,15 @@ import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { ChatGateway } from '../chat/chat.gateway';
 
 @Controller('channel')
 export class ChannelController {
-  constructor(private readonly channelService: ChannelService) {}
+  constructor(
+    private readonly channelService: ChannelService,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   @Post()
   create(
@@ -27,15 +34,17 @@ export class ChannelController {
   }
 
   @Post('direct-message')
-  createDirectMessage(
+  async createDirectMessage(
     @Body() body: { workspaceId: string; targetUserId: string },
     @Session() session: UserSession,
   ) {
-    return this.channelService.findOrCreateDirectMessage(
+    const channel = await this.channelService.findOrCreateDirectMessage(
       body.workspaceId,
       session.user.id,
       body.targetUserId,
     );
+    this.chatGateway.broadcastChannelCreated(channel);
+    return channel;
   }
 
   @Get()

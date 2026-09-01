@@ -20,6 +20,7 @@ import {
 interface ChannelSidebarProps {
   workspace: Workspace;
   channels: Channel[];
+  members: User[];
   activeChannelId: string;
   onSelectChannel: (channelId: string) => void;
   onOpenCreateChannel: () => void;
@@ -33,6 +34,7 @@ interface ChannelSidebarProps {
 export const ChannelSidebar: React.FC<ChannelSidebarProps> = ({
   workspace,
   channels,
+  members,
   activeChannelId,
   onSelectChannel,
   onOpenCreateChannel,
@@ -195,6 +197,63 @@ export const ChannelSidebar: React.FC<ChannelSidebarProps> = ({
             </div>
           );
         })}
+
+        {(() => {
+          const dmChannels = filteredChannels.filter((c) => c.section === 'direct-messages');
+          if (dmChannels.length === 0) return null;
+
+          return (
+            <div className="space-y-0.5">
+              <div className="px-2 py-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
+                  Direct Messages
+                </span>
+              </div>
+
+              <div className="space-y-0.5">
+                {dmChannels.map((channel) => {
+                  const otherUserId = channel.memberIds?.find((id) => id !== currentUser.id);
+                  const otherUser = members.find((m) => m.id === otherUserId);
+                  const isActive = channel.id === activeChannelId;
+
+                  return (
+                    <button
+                      key={channel.id}
+                      id={`channel-btn-${channel.id}`}
+                      onClick={() => onSelectChannel(channel.id)}
+                      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all text-left ${
+                        isActive
+                          ? 'bg-[#1E293B] text-[#06B6D4] font-bold shadow-sm'
+                          : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#1E293B]/50'
+                      }`}
+                    >
+                      <div className="relative shrink-0">
+                        {otherUser ? (
+                          <img
+                            src={otherUser.avatar}
+                            alt={otherUser.name}
+                            className="w-5 h-5 rounded-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-[#334155]" />
+                        )}
+                        {otherUser && (
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[#0F172A] ${
+                              otherUser.status === 'online' ? 'bg-emerald-400' : 'bg-slate-500'
+                            }`}
+                          />
+                        )}
+                      </div>
+                      <span className="truncate">{otherUser?.name ?? channel.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Live Voice Connected Banner (if active) */}

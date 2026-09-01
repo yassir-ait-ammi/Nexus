@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Workspace } from './entities/workspace.entity';
@@ -33,7 +37,9 @@ export class WorkspaceService {
   ) {}
 
   private async withMembersCount(workspace: Workspace) {
-    const membersCount = await this.membershipService.countMembers(workspace.id);
+    const membersCount = await this.membershipService.countMembers(
+      workspace.id,
+    );
     return { ...workspace, membersCount };
   }
 
@@ -69,7 +75,8 @@ export class WorkspaceService {
   }
 
   async findAllForUser(userId: string) {
-    const memberships = await this.membershipService.workspaceIdsForUser(userId);
+    const memberships =
+      await this.membershipService.workspaceIdsForUser(userId);
     if (memberships.length === 0) return [];
 
     const workspaces = await this.workspaceRepository.findBy({
@@ -93,10 +100,16 @@ export class WorkspaceService {
       throw new NotFoundException('Invalid invite link');
     }
 
-    const alreadyMember = await this.membershipService.isMember(workspace.id, userId);
+    const alreadyMember = await this.membershipService.isMember(
+      workspace.id,
+      userId,
+    );
     if (!alreadyMember) {
       await this.membershipService.create(workspace.id, userId, 'Member');
-      const member = await this.membershipService.getMemberDto(workspace.id, userId);
+      const member = await this.membershipService.getMemberDto(
+        workspace.id,
+        userId,
+      );
       if (member) {
         this.chatGateway.broadcastMemberJoined(workspace.id, member);
       }

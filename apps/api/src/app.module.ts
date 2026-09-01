@@ -28,7 +28,8 @@ import { auth } from './auth/auth';
         password: configService.get<string>('DB_PASSWORD', 'nexus'),
         database: configService.get<string>('DB_NAME', 'nexus'),
         autoLoadEntities: true,
-        synchronize: configService.get<string>('NODE_ENV', 'development') !== 'production',
+        synchronize:
+          configService.get<string>('NODE_ENV', 'development') !== 'production',
       }),
     }),
     AuthModule.forRoot({

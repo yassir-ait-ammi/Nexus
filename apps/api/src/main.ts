@@ -5,8 +5,6 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    // better-auth handles body parsing itself and re-adds the default
-    // parsers for non-auth routes.
     bodyParser: false,
   });
   app.enableCors({

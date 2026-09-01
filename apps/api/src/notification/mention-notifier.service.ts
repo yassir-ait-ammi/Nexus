@@ -40,8 +40,10 @@ export class MentionNotifierService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.rabbitmqService.consume(MENTION_QUEUE, MESSAGE_CREATED_ROUTING_KEY, (payload) =>
-      this.handleMessageCreated(payload as MessageCreatedEvent),
+    await this.rabbitmqService.consume(
+      MENTION_QUEUE,
+      MESSAGE_CREATED_ROUTING_KEY,
+      (payload) => this.handleMessageCreated(payload as MessageCreatedEvent),
     );
   }
 
@@ -49,17 +51,24 @@ export class MentionNotifierService implements OnModuleInit {
     const usernames = extractMentionedUsernames(event.content);
     if (usernames.length === 0) return;
 
-    const userIdsByUsername = await this.authUsersService.findIdsByUsernames(usernames);
+    const userIdsByUsername =
+      await this.authUsersService.findIdsByUsernames(usernames);
     const mentionedUserIds = [...new Set(userIdsByUsername.values())].filter(
       (id) => id !== event.senderId,
     );
     if (mentionedUserIds.length === 0) return;
 
     for (const userId of mentionedUserIds) {
-      const isMember = await this.membershipService.isMember(event.workspaceId, userId);
+      const isMember = await this.membershipService.isMember(
+        event.workspaceId,
+        userId,
+      );
       if (!isMember) continue;
 
-      const canAccess = await this.channelService.canAccess(event.channelId, userId);
+      const canAccess = await this.channelService.canAccess(
+        event.channelId,
+        userId,
+      );
       if (!canAccess) continue;
 
       const notification = await this.notificationService.create({
@@ -73,7 +82,9 @@ export class MentionNotifierService implements OnModuleInit {
 
       const dto = await this.notificationService.hydrateOne(notification);
       this.chatGateway.broadcastNotification(userId, dto);
-      this.logger.log(`Notified ${userId} of mention in message ${event.messageId}`);
+      this.logger.log(
+        `Notified ${userId} of mention in message ${event.messageId}`,
+      );
     }
   }
 }

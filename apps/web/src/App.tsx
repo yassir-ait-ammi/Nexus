@@ -248,6 +248,25 @@ export default function App() {
     };
   }, [currentUser?.id, activeWorkspaceId, isSocketReady]);
 
+  // A DM channel has no other realtime signal when it's created — unlike
+  // every other write in this app, it's not scoped to a workspace/channel
+  // room the recipient is already in. The gateway targets each member's
+  // personal `user:<id>` room instead, so this listener isn't gated on
+  // activeWorkspaceId; it just merges in whatever channel arrives (a no-op
+  // if we're the one who started it, since we already added it locally).
+  useEffect(() => {
+    if (!currentUser) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onChannelCreated = (channel: Channel) => {
+      setChannels((prev) => (prev.some((c) => c.id === channel.id) ? prev : [...prev, channel]));
+    };
+
+    socket.on('channel:created', onChannelCreated);
+    return () => socket.off('channel:created', onChannelCreated);
+  }, [currentUser?.id, isSocketReady]);
+
   // Load existing notifications once authenticated, then keep them live via
   // the socket (a personal `user:<id>` room the gateway joins every socket
   // to — notifications aren't scoped to whichever workspace/channel is
@@ -481,6 +500,7 @@ export default function App() {
         <ChannelSidebar
           workspace={activeWorkspace}
           channels={channels}
+          members={members}
           activeChannelId={activeChannel.id}
           onSelectChannel={handleSelectChannel}
           onOpenCreateChannel={() => setIsCreateChannelOpen(true)}

@@ -35,10 +35,6 @@ export const auth = betterAuth({
     additionalFields: {
       username: {
         type: 'string',
-        // Not enforced as required here: that would block social sign-in,
-        // which never supplies a username. The register form still requires
-        // it for email/password sign-up, and the hook below backfills it
-        // for everyone else so the NOT NULL column is always satisfied.
         required: false,
         input: true,
       },

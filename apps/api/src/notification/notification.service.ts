@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
@@ -39,12 +43,19 @@ export class NotificationService {
   ) {}
 
   async create(input: CreateNotificationInput): Promise<Notification> {
-    const notification = this.notificationRepository.create({ ...input, type: 'mention' });
+    const notification = this.notificationRepository.create({
+      ...input,
+      type: 'mention',
+    });
     return this.notificationRepository.save(notification);
   }
 
-  private async hydrate(notifications: Notification[]): Promise<NotificationDto[]> {
-    const senders = await this.authUsersService.findByIds(notifications.map((n) => n.senderId));
+  private async hydrate(
+    notifications: Notification[],
+  ): Promise<NotificationDto[]> {
+    const senders = await this.authUsersService.findByIds(
+      notifications.map((n) => n.senderId),
+    );
     return notifications.map((n) => {
       const sender = senders.get(n.senderId);
       return {
@@ -57,7 +68,12 @@ export class NotificationService {
         workspaceId: n.workspaceId,
         channelId: n.channelId,
         sender: sender
-          ? { id: sender.id, name: sender.name, username: sender.username, avatar: sender.avatar }
+          ? {
+              id: sender.id,
+              name: sender.name,
+              username: sender.username,
+              avatar: sender.avatar,
+            }
           : null,
       };
     });
@@ -90,6 +106,9 @@ export class NotificationService {
   }
 
   async markAllRead(userId: string): Promise<void> {
-    await this.notificationRepository.update({ userId, read: false }, { read: true });
+    await this.notificationRepository.update(
+      { userId, read: false },
+      { read: true },
+    );
   }
 }

@@ -3,7 +3,7 @@
 API_DIR := apps/api
 WEB_DIR := apps/web
 
-.PHONY: help install up down ps logs migrate generate api web dev stop
+.PHONY: help install up down ps logs migrate generate api web dev stop cluster cluster-down cluster-logs cluster-ps
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -44,3 +44,15 @@ dev: up ## Run Postgres, the API, and the web app together
 
 stop: ## Kill anything left running on the dev ports (3000, 5173)
 	-fuser -k 3000/tcp 5173/tcp
+
+cluster: ## Build and run 3 containerized API instances behind nginx (requires apps/api/.env). App at :8080
+	COMPOSE_PROFILES=cluster docker compose up -d --build
+
+cluster-down: ## Stop the cluster profile (api1-3, nginx) — leaves postgres/redis/rabbitmq running
+	COMPOSE_PROFILES=cluster docker compose stop api1 api2 api3 nginx
+
+cluster-logs: ## Tail logs from the 3 API instances and nginx
+	COMPOSE_PROFILES=cluster docker compose logs -f api1 api2 api3 nginx
+
+cluster-ps: ## Show status of the cluster containers
+	COMPOSE_PROFILES=cluster docker compose ps

@@ -62,7 +62,9 @@ export class MessageService {
     messageIds: string[],
   ): Promise<Map<string, Record<string, string[]>>> {
     if (messageIds.length === 0) return new Map();
-    const rows = await this.reactionRepository.findBy({ messageId: In(messageIds) });
+    const rows = await this.reactionRepository.findBy({
+      messageId: In(messageIds),
+    });
 
     const byMessage = new Map<string, Record<string, string[]>>();
     for (const row of rows) {
@@ -153,9 +155,6 @@ export class MessageService {
     const [hydrated] = await this.hydrate([saved]);
     this.chatGateway.broadcastMessageCreated(hydrated);
 
-    // Fire-and-forget: mention notifications are a side effect, not part of
-    // "did the message send" — a slow/failed consumer shouldn't hold up or
-    // fail the send.
     this.rabbitmqService
       .publish(MESSAGE_CREATED_ROUTING_KEY, {
         messageId: saved.id,
@@ -165,7 +164,9 @@ export class MessageService {
         content: saved.content,
         createdAt: saved.createdAt.toISOString(),
       })
-      .catch((err: Error) => this.logger.warn(`Failed to publish message.created: ${err.message}`));
+      .catch((err: Error) =>
+        this.logger.warn(`Failed to publish message.created: ${err.message}`),
+      );
 
     return hydrated;
   }
@@ -236,7 +237,11 @@ export class MessageService {
 
     const reactionsByMessage = await this.reactionsByMessageId([messageId]);
     const reactions = reactionsByMessage.get(messageId) ?? {};
-    this.chatGateway.broadcastReactionUpdated(message.channelId, messageId, reactions);
+    this.chatGateway.broadcastReactionUpdated(
+      message.channelId,
+      messageId,
+      reactions,
+    );
     return { messageId, reactions };
   }
 }

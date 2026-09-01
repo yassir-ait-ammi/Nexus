@@ -10,7 +10,10 @@ export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 
   @Post()
-  create(@Body() createWorkspaceDto: CreateWorkspaceDto, @Session() session: UserSession) {
+  create(
+    @Body() createWorkspaceDto: CreateWorkspaceDto,
+    @Session() session: UserSession,
+  ) {
     return this.workspaceService.create(createWorkspaceDto, session.user.id);
   }
 
@@ -21,7 +24,10 @@ export class WorkspaceController {
 
   @Post('join')
   join(@Body() body: { inviteCode: string }, @Session() session: UserSession) {
-    return this.workspaceService.joinByInviteCode(body.inviteCode, session.user.id);
+    return this.workspaceService.joinByInviteCode(
+      body.inviteCode,
+      session.user.id,
+    );
   }
 
   @Get(':id')
@@ -35,6 +41,10 @@ export class WorkspaceController {
     @Body() updateWorkspaceDto: UpdateWorkspaceDto,
     @Session() session: UserSession,
   ) {
-    return this.workspaceService.update(id, updateWorkspaceDto, session.user.id);
+    return this.workspaceService.update(
+      id,
+      updateWorkspaceDto,
+      session.user.id,
+    );
   }
 }

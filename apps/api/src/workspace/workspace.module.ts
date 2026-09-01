@@ -8,7 +8,12 @@ import { ChannelModule } from '../channel/channel.module';
 import { ChatModule } from '../chat/chat.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Workspace]), MembershipModule, ChannelModule, ChatModule],
+  imports: [
+    TypeOrmModule.forFeature([Workspace]),
+    MembershipModule,
+    ChannelModule,
+    ChatModule,
+  ],
   controllers: [WorkspaceController],
   providers: [WorkspaceService],
 })
