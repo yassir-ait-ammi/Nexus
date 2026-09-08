@@ -11,6 +11,7 @@ Short records of decisions that weren't obvious enough to skip explaining — ea
 | [0005](0005-cloudinary-for-avatar-storage.md) | Cloudinary for avatar storage |
 | [0006](0006-nginx-sticky-sessions.md) | nginx sticky sessions (`ip_hash`) in front of the API cluster |
 | [0007](0007-channel-created-broadcast.md) | `channel:created` broadcast for DM creation (and the `forwardRef` it required) |
+| [0008](0008-account-issuer-column.md) | Patching the `account.issuer` column after every `make migrate` — a Better Auth version mismatch that breaks sign-up on a fresh clone |
 
 ## Format
 

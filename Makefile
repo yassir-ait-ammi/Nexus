@@ -26,6 +26,7 @@ logs: ## Tail Postgres, Redis, and RabbitMQ logs
 
 migrate: up ## Apply the better-auth database schema
 	cd $(API_DIR) && npx auth@latest migrate --config src/auth/auth.ts -y
+	docker compose exec -T postgres psql -U nexus -d nexus < scripts/fix-account-issuer-column.sql
 
 generate: ## Regenerate the better-auth migration SQL (does not apply it)
 	cd $(API_DIR) && npx auth@latest generate --config src/auth/auth.ts -y
